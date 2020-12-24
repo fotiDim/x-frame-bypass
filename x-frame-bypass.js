@@ -1,20 +1,53 @@
+function setUserAgent(window, userAgent) {
+	// Works on Firefox, Chrome, Opera and IE9+
+	if (navigator.__defineGetter__) {
+		navigator.__defineGetter__('userAgent', function () {
+			return userAgent;
+		});
+	} else if (Object.defineProperty) {
+		Object.defineProperty(navigator, 'userAgent', {
+			get: function () {
+				return userAgent;
+			}
+		});
+	}
+	// Works on Safari
+	if (window.navigator.userAgent !== userAgent) {
+		var userAgentProp = {
+			get: function () {
+				return userAgent;
+			}
+		};
+		try {
+			Object.defineProperty(window.navigator, 'userAgent', userAgentProp);
+		} catch (e) {
+			window.navigator = Object.create(navigator, {
+				userAgent: userAgentProp
+			});
+		}
+	}
+}
+
 customElements.define('x-frame-bypass', class extends HTMLIFrameElement {
 	static get observedAttributes() {
 		return ['src']
 	}
-	constructor () {
+	constructor() {
 		super()
 	}
-	attributeChangedCallback () {
+	attributeChangedCallback() {
 		this.load(this.src)
 	}
-	connectedCallback () {
+	connectedCallback() {
 		this.sandbox = '' + this.sandbox || 'allow-forms allow-modals allow-pointer-lock allow-popups allow-popups-to-escape-sandbox allow-presentation allow-same-origin allow-scripts allow-top-navigation-by-user-activation' // all except allow-top-navigation
 	}
-	load (url, options) {
+
+	load(url, options) {
 		if (!url || !url.startsWith('http'))
 			throw new Error(`X-Frame-Bypass src ${url} does not start with http(s)://`)
 		console.log('X-Frame-Bypass loading:', url)
+		// this.setUserAgent(this.window, "My Custom User Agent");
+		setUserAgent(document.querySelector('iframe').contentWindow, 'Mozilla/5.0 (iPhone; CPU iPhone OS 12_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/12.1 Mobile/15E148 Safari/604.1');
 		this.srcdoc = `<html>
 <head>
 	<style>
@@ -67,7 +100,7 @@ customElements.define('x-frame-bypass', class extends HTMLIFrameElement {
 	</script>`)
 		}).catch(e => console.error('Cannot load X-Frame-Bypass:', e))
 	}
-	fetchProxy (url, options, i) {
+	fetchProxy(url, options, i) {
 		const proxies = (options || {}).proxies || [
 			'https://cors-anywhere.herokuapp.com/',
 			'https://yacdn.org/proxy/',
@@ -83,4 +116,4 @@ customElements.define('x-frame-bypass', class extends HTMLIFrameElement {
 			return this.fetchProxy(url, options, i + 1)
 		})
 	}
-}, {extends: 'iframe'})
+}, { extends: 'iframe' })
